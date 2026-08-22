@@ -79,9 +79,35 @@ async function verifyMode(mode) {
   }
 }
 
+async function verifyProtectedSecretMode() {
+  const temp = await fs.mkdtemp(path.join(os.tmpdir(), "codgram-secret-ui-"));
+  const dataDir = path.join(temp, "data");
+  const workspaceId = "CodgramProtectedSecretSmoke";
+  const project = path.join(temp, workspaceId);
+  try {
+    await fs.mkdir(project, { recursive: true });
+    await fs.writeFile(path.join(project, "package.json"), JSON.stringify({ name: workspaceId }));
+    await fs.mkdir(dataDir, { recursive: true });
+    await fs.writeFile(path.join(dataDir, "settings.json"), JSON.stringify({ provider: "openai-compatible", model: "smoke-coder", maxIterations: 12, confirmationMode: "dangerous-only", theme: "dark", onboardingCompleted: true }, null, 2));
+    const output = await run("xvfb-run", ["-a", "pnpm", "exec", "electron", "desktop/main.cjs"], {
+      cwd: path.resolve(__dirname, ".."),
+      env: { ...process.env, CODGRAM_DESKTOP_PORT: "4693", CODGRAM_DATA_DIR: dataDir, CODGRAM_DESKTOP_SMOKE_PROJECT: project, CODGRAM_DESKTOP_V21_UI_SMOKE: "secret" },
+    });
+    if (!output.includes("[Codgram desktop protected-secret UI smoke] store, clear, and non-disclosure flow passed")) throw new Error("The protected-secret desktop flow did not emit its success marker.");
+    const settings = await fs.readFile(path.join(dataDir, "settings.json"), "utf8");
+    if (settings.includes("smoke-provider-secret")) throw new Error("The protected provider secret was persisted in settings.");
+    await fs.access(path.join(dataDir, "electron-user-data", "codgram", "provider-secret.json")).then(() => { throw new Error("The protected provider secret file was not removed after the clear action."); }).catch(error => {
+      if ((error && error.code) !== "ENOENT") throw error;
+    });
+  } finally {
+    await fs.rm(temp, { recursive: true, force: true });
+  }
+}
+
 async function main() {
   await verifyMode("success");
   await verifyMode("conflict");
+  await verifyProtectedSecretMode();
   console.log("[Codgram desktop V2.1 UI smoke] all flows passed");
 }
 

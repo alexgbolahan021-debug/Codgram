@@ -1,6 +1,6 @@
 # Optional Local Provider Secret Storage
 
-Codgram currently treats provider secrets as local server environment configuration. This remains the default because it keeps raw credentials out of renderer memory, browser storage, local settings, histories, and logs. An optional native-desktop keychain feature may be added only as a separately reviewed capability.
+Codgram continues to support local server environment configuration as the default provider-secret path. Native desktop users may now opt into storing one OpenAI-compatible provider secret with Electron `safeStorage`. This feature remains intentionally narrow: it is not a secret viewer, exporter, endpoint manager, or browser-storage client.
 
 ## Security objective
 
@@ -9,23 +9,23 @@ The feature must let a single local user store an OpenAI-compatible provider sec
 | Boundary | Required design |
 | --- | --- |
 | Renderer | Can submit a secret once to a narrow IPC action, receive success/failure, and request non-sensitive configuration status. It cannot read an existing secret, enumerate secrets, or receive encrypted ciphertext. |
-| Preload bridge | Exposes only `saveProviderSecret`, `clearProviderSecret`, and `getProviderSecretStatus`; validates provider identifiers and rejects arbitrary key names. |
-| Main process | Uses Electron `safeStorage` only after checking `safeStorage.isEncryptionAvailable()`. It owns encryption/decryption and never writes raw secrets to console output. |
-| Local storage | Stores ciphertext plus a minimal versioned reference in a private local app-data file with restrictive permissions. It never uses `localStorage`, IndexedDB, run history, settings JSON, or the workspace. |
-| Local server | Receives the plaintext only in process memory when a run needs the selected provider. It redacts errors and does not return the value through an RPC response. |
+| Preload bridge | Exposes only `saveProviderSecret`, `clearProviderSecret`, and `getProviderSecretStatus`. It accepts no arbitrary secret name, and it cannot read, enumerate, or export existing values. |
+| Main process | Uses Electron’s asynchronous safeStorage APIs only after checking their availability. It owns encryption/decryption and never writes raw secrets to console output. |
+| Local storage | Stores only base64 ciphertext and a version at `userData/codgram/provider-secret.json`, in a private app-data directory with restrictive permissions. It never uses `localStorage`, IndexedDB, run history, settings JSON, or the workspace. |
+| Local server | Receives plaintext only through its launch-time process environment after Electron main decrypts the stored value. Storing or clearing restarts the local server; no RPC response returns the value. |
 | Logs and diagnostics | Continue applying secret redaction. Do not log provider request headers, IPC arguments, ciphertext, or environment snapshots. |
 
-## Recommended implementation sequence
+## Implemented behavior
 
-First, extend the Electron main process and preload contract with typed, provider-specific IPC calls. The renderer should show an opt-in **Store locally in system keychain** action only after a user has chosen the OpenAI-compatible provider. The entry field must use a password control, clear its value immediately after submission, disable browser autofill where appropriate, and never place the value in React query caches, toasts, analytics, or error strings.
+The desktop Settings view presents the optional **Protected local provider secret** control only when the OpenAI-compatible provider is selected. Its entry field uses a password control with browser autofill disabled, clears immediately after a successful handoff, and keeps no secret value in React query state, persistent settings, diagnostics, or toast content.
 
-Second, use `safeStorage.encryptString` and `safeStorage.decryptString` only when encryption is available. On Linux, availability depends on the desktop environment’s secret-service support; when it is unavailable, Codgram should retain the environment-variable setup path and explain that protected local storage is not available. It must not fall back to weak reversible encoding or a plaintext file.
+Codgram uses `encryptStringAsync` and `decryptStringAsync`. On Linux, Codgram refuses to store a secret whenever Electron selects the `basic_text` fallback, because that fallback is not OS-protected. The environment-variable setup path remains available on every platform. Electron recommends the asynchronous APIs because they are non-blocking and support key rotation.[1]
 
-Third, pass the decrypted secret from Electron main to the local server through a narrowly scoped launch-time channel or a one-shot, authenticated local IPC route. Avoid expanding the existing renderer bridge. The persisted Codgram settings record should store only provider choice, model preference, and a boolean such as `providerSecretStored`; it must not store a credential, ciphertext, keychain account name, or endpoint authorization header.
+The renderer receives only status: whether protected storage is available, whether a value is stored, a selected backend label, and a generic safe message. The persisted Codgram settings record does not contain a credential, ciphertext, keychain account name, endpoint authorization header, or secret-status marker.
 
-Finally, add tests for unavailable encryption, save/replace/clear behavior, renderer API non-disclosure, no-secret log redaction, and server process restart behavior. A security review should precede enabling the feature by default.
+Regression tests cover ciphertext-only persistence, status-only return values, clearing, and Linux `basic_text` refusal. This feature remains opt-in; a further independent security review is appropriate before changing that default.
 
-> **Decision:** This release-automation update intentionally does not add native secret persistence. It documents a bounded implementation plan and preserves the safer server-environment configuration path until the explicit IPC, storage, and review work is implemented and tested.
+> **Decision:** Codgram implements protected local secret storage only for its native Electron shell and only through OS-backed encryption reported as available by Electron. The safer server-environment configuration remains the default and the only option for browser mode or unsupported Linux secret services.
 
 ## References
 

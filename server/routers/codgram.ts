@@ -7,13 +7,13 @@ import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 
 const workspaceInput = z.object({ workspaceId: z.string().min(1).max(180) });
 const smokeMode = process.env.CODGRAM_DESKTOP_V21_UI_SMOKE;
-const codgramProcedure = smokeMode === "success" || smokeMode === "conflict" ? publicProcedure : protectedProcedure;
+const codgramProcedure = smokeMode === "success" || smokeMode === "conflict" || smokeMode === "secret" ? publicProcedure : protectedProcedure;
 
 export const codgramRouter = router({
   workspaces: codgramProcedure.query(() => workspaceService.listWorkspaces()),
   inspectWorkspace: codgramProcedure.input(workspaceInput).query(({ input }) => workspaceService.inspect(input.workspaceId)),
   listModels: codgramProcedure.query(async () => {
-    if (smokeMode === "success" || smokeMode === "conflict") return { models: ["smoke-coder"], available: true };
+    if (smokeMode === "success" || smokeMode === "conflict" || smokeMode === "secret") return { models: ["smoke-coder"], available: true };
     try {
       return { models: await codgramRuntime.listModels(), available: true };
     } catch {

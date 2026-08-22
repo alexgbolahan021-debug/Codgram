@@ -14,7 +14,7 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
     "desktop:dev": "electron desktop/main.cjs",
-    "desktop:check": "node --check desktop/main.cjs && node --check desktop/preload.cjs && node --check desktop/contract.cjs && node --check desktop/runtime.cjs && node --check desktop/environment.cjs && node --check desktop/state.cjs",
+    "desktop:check": "node --check desktop/main.cjs && node --check desktop/preload.cjs && node --check desktop/contract.cjs && node --check desktop/runtime.cjs && node --check desktop/environment.cjs && node --check desktop/state.cjs && node --check desktop/provider-secret-store.cjs",
     "desktop:smoke:v21": "node desktop/v21-ui-smoke.cjs",
     "desktop:build": "pnpm build && electron-builder --dir",
     "desktop:package": "pnpm build && electron-builder --mac --win --linux",
@@ -140,11 +140,13 @@
       "target": ["dmg", "zip"],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
+      "icon": "desktop/build-resources/icon.icns",
       "entitlements": "desktop/build-resources/entitlements.mac.plist",
       "entitlementsInherit": "desktop/build-resources/entitlements.mac.plist"
     },
     "win": {
       "target": [{ "target": "nsis", "arch": ["x64", "arm64"] }],
+      "icon": "desktop/build-resources/icon.ico",
       "signtoolOptions": {
         "publisherName": "Codgram"
       }
@@ -159,6 +161,7 @@
       "target": ["AppImage", "deb", "rpm"],
       "category": "Development",
       "maintainer": "Codgram",
+      "icon": "desktop/build-resources/icons",
       "syncDesktopName": true
     }
   },

@@ -29,7 +29,7 @@ The V2.1 package configuration produces the following installer artifacts in `re
 
 For a fast local packaging smoke check that does not create an installer, run `pnpm desktop:build`. Build distributable artifacts on their native operating system in CI or on a release machine whenever practical. macOS signing and notarization require an Apple signing identity and the applicable Apple credentials; Windows distribution requires an Authenticode signing certificate. Electron Builder accepts these secrets from the release environment, commonly through `CSC_LINK` and `CSC_KEY_PASSWORD`; macOS notarization additionally requires the Apple credentials supported by the release process. Do not commit certificates, passwords, Apple credentials, or provider credentials to this repository.
 
-Codgram V2.2 includes a **manual, tag-driven GitHub Actions release workflow** that builds native macOS, Windows, and Linux artifacts, requires macOS/Windows signing, and creates a draft release for human review. Configure the required signing secrets before triggering it; see [Signed Release CI](docs/RELEASE_CI.md). The optional operating-system-keychain provider-secret design is documented separately in [Local Provider Secret Storage](docs/KEYCHAIN_SECRET_STORAGE.md); it is not enabled yet, so provider credentials remain server-side environment configuration.
+Codgram V2.2 includes branded native installer icons and a **manual, tag-driven GitHub Actions release workflow**. A matching version tag builds Linux AppImage, DEB, and RPM artifacts without signing secrets and creates a draft release for human review. macOS/Windows builds remain available through a separate credentialed `full-signed` manual workflow mode; see [Signed Release CI](docs/RELEASE_CI.md).
 
 ## Local provider setup and desktop onboarding
 
@@ -51,6 +51,8 @@ CODGRAM_OPENAI_API_KEY=your-local-secret \
 CODGRAM_OPENAI_MODEL=your-model-id \
 pnpm desktop:dev
 ```
+
+Native desktop users may alternatively select the OpenAI-compatible provider in **Settings** and opt into **Protected local provider secret** storage. Codgram submits that value once through Electron’s isolated bridge, encrypts it with OS-backed storage, and only supplies it to the restarted local server process. The dashboard cannot reveal, export, or list it. This option is unavailable in browser mode and is refused on Linux when Electron reports its unprotected `basic_text` fallback. See [Local Provider Secret Storage](docs/KEYCHAIN_SECRET_STORAGE.md) for the boundary and platform details.[1]
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
@@ -81,7 +83,11 @@ pnpm desktop:smoke:v21
 pnpm exec electron-builder --dir --linux --x64
 ```
 
-The test suite covers workspace containment, secret redaction, terminal/Git constraints, structured tool-call handling, confirmation outcomes, provider onboarding persistence without credential fields, installer configuration, checkpoint first-state capture, conflict-safe workspace restoration, and one-time runtime rollback. The native V2.1 smoke command uses isolated temporary data and projects to select the OpenAI-compatible provider and a model preference without a credential field, reload completed onboarding to prove it stays dismissed, and exercise both successful and conflict-refused checkpoint restoration.
+The test suite covers workspace containment, secret redaction, terminal/Git constraints, structured tool-call handling, confirmation outcomes, provider onboarding persistence without credential fields, installer icon configuration, protected-secret ciphertext-only persistence and Linux fallback refusal, checkpoint first-state capture, conflict-safe workspace restoration, and one-time runtime rollback. The native V2.1 smoke command uses isolated temporary data and projects to select the OpenAI-compatible provider and a model preference without a credential field, reload completed onboarding to prove it stays dismissed, and exercise both successful and conflict-refused checkpoint restoration.
+
+## References
+
+[1] [Electron `safeStorage` API](https://www.electronjs.org/docs/latest/api/safe-storage)
 
 ## Recommended first run
 

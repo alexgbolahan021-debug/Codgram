@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ProviderSecretPanel } from "@/components/ProviderSecretPanel";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import type { CodgramRun, CodgramSettings, RunActivity } from "../../../server/codgram/types";
@@ -12,6 +13,9 @@ type DesktopBridge = {
   isDesktop: true;
   getWorkspaceState(): Promise<{ isDesktop: true; workspaceId: string | null }>;
   chooseProjectFolder(): Promise<{ cancelled: boolean; workspaceId?: string }>;
+  getProviderSecretStatus(): Promise<{ available: boolean; stored: boolean; backend: string | null; message: string }>;
+  saveProviderSecret(value: string): Promise<{ available: boolean; stored: boolean; backend: string | null; message: string }>;
+  clearProviderSecret(): Promise<{ available: boolean; stored: boolean; backend: string | null; message: string }>;
 };
 const EMPTY_RUN_ID = "00000000-0000-4000-8000-000000000000";
 
@@ -48,6 +52,7 @@ function SettingsPanel({ settings, models, available, saving, onSave }: { settin
       <label className="space-y-2"><span className="text-sm font-medium text-slate-200">Maximum agent iterations</span><input type="number" min={1} max={30} value={active.maxIterations} onChange={event => setDraft({ ...active, maxIterations: Math.min(30, Math.max(1, Number(event.target.value) || 1)) })} className="codgram-input" /><span className="block text-xs text-slate-500">Codgram ends in a reviewable state when this limit is reached.</span></label>
       <label className="space-y-2"><span className="text-sm font-medium text-slate-200">Confirmation behavior</span><select value={active.confirmationMode} onChange={event => setDraft({ ...active, confirmationMode: event.target.value as CodgramSettings["confirmationMode"] })} className="codgram-select"><option value="dangerous-only">Dangerous actions only</option><option value="all-writes">All file writes</option></select><span className="block text-xs text-slate-500">Delete, dependency, commit, and branch actions remain reviewable.</span></label>
     </div>
+    <ProviderSecretPanel provider={active.provider} />
     <div className="flex justify-end border-t border-white/7 bg-black/10 px-6 py-4"><Button onClick={() => onSave(active)} disabled={saving} className="h-10 rounded-xl bg-violet-500 px-5 font-medium text-white hover:bg-violet-400">{saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Check className="mr-2 size-4" />} Save local settings</Button></div>
   </section>;
 }

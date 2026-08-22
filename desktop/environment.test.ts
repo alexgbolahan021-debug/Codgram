@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
 const { createCodgramDesktopEnvironment } = require("./environment.cjs") as {
-  createCodgramDesktopEnvironment(base: Record<string, string | undefined>, selection: { port: number; workspaceRoot: string; workspaceId: string | null; isPackaged: boolean }): Record<string, string | undefined>;
+  createCodgramDesktopEnvironment(base: Record<string, string | undefined>, selection: { port: number; workspaceRoot: string; workspaceId: string | null; isPackaged: boolean; providerApiKey?: string | null }): Record<string, string | undefined>;
 };
 const { createWorkspaceSelectionHandler } = require("./runtime.cjs") as {
   createWorkspaceSelectionHandler(dependencies: {
@@ -43,5 +43,17 @@ describe("Codgram desktop selection environment handoff", () => {
       NODE_ENV: "development",
     });
     expect(workspaceState.toRendererState()).toEqual({ isDesktop: true, workspaceId: "website" });
+  });
+
+  it("hands a decrypted protected provider secret only to the local server environment", () => {
+    const environment = createCodgramDesktopEnvironment({ EXISTING_FLAG: "kept" }, {
+      port: 4599,
+      workspaceRoot: "/Users/codgram/Projects",
+      workspaceId: "website",
+      isPackaged: true,
+      providerApiKey: "protected-value",
+    });
+    expect(environment).toMatchObject({ CODGRAM_OPENAI_API_KEY: "protected-value", NODE_ENV: "production" });
+    expect(createCodgramDesktopEnvironment({}, { port: 4599, workspaceRoot: "/tmp", workspaceId: null, isPackaged: false })).not.toHaveProperty("CODGRAM_OPENAI_API_KEY");
   });
 });
