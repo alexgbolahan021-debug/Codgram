@@ -25,5 +25,7 @@ describe("Codgram signed release workflow", () => {
     expect(workflow).toContain("--draft");
     expect(workflow).toContain("needs.linux.result == 'success'");
     expect(workflow).toContain("Release tag must match package.json version");
+    expect(workflow).toContain("pnpm/action-setup@v4");
+    expect(workflow).not.toContain("version: 10.4.1");
   });
 });

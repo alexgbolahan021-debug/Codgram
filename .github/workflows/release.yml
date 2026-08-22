@@ -39,8 +39,6 @@ jobs:
         with:
           ref: ${{ env.RELEASE_TAG }}
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.4.1
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -73,8 +71,6 @@ jobs:
         with:
           ref: ${{ env.RELEASE_TAG }}
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.4.1
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -101,8 +97,6 @@ jobs:
         with:
           ref: ${{ env.RELEASE_TAG }}
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.4.1
       - uses: actions/setup-node@v4
         with:
           node-version: 22
