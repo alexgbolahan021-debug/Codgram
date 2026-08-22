@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { Tool } from "../_core/llm";
 import { gitTools } from "./git";
+import { getLockedWorkspaceId, getWorkspaceRoot, normalizeWorkspaceId, resolveInside } from "./security";
 import { assessCommand, runValidatedCommand } from "./terminal";
 import type { CodgramSettings, ToolExecutionResult } from "./types";
 import { workspaceService } from "./workspace";
@@ -30,7 +31,10 @@ function asString(args: Record<string, unknown>, key: string) {
 }
 
 function workspaceCwd(workspaceId: string) {
-  return path.resolve(process.env.CODGRAM_WORKSPACE_ROOT || process.env.CORTEX_WORKSPACE_ROOT || process.cwd(), workspaceId);
+  const normalized = normalizeWorkspaceId(workspaceId);
+  const locked = getLockedWorkspaceId();
+  if (locked && normalized !== locked) throw new Error("Codgram is locked to the project selected in the desktop shell.");
+  return resolveInside(getWorkspaceRoot(), normalized);
 }
 
 export async function executeCodgramTool(workspaceId: string, toolName: string, args: Record<string, unknown>, allowDestructive = false, confirmationMode: CodgramSettings["confirmationMode"] = "dangerous-only"): Promise<ToolExecutionResult> {

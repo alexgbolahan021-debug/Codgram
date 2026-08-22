@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { getWorkspaceRoot, isIgnoredWorkspacePath, isSensitivePath, normalizeWorkspaceId, resolveInside } from "./security";
+import { getLockedWorkspaceId, getWorkspaceRoot, isIgnoredWorkspacePath, isSensitivePath, normalizeWorkspaceId, resolveInside } from "./security";
 import type { FileChange, WorkspaceInspection } from "./types";
 
 const MAX_FILE_BYTES = 256 * 1024;
@@ -46,7 +46,10 @@ export class WorkspaceService {
   }
 
   private workspacePath(workspaceId: string): string {
-    return resolveInside(this.root(), normalizeWorkspaceId(workspaceId));
+    const normalized = normalizeWorkspaceId(workspaceId);
+    const locked = getLockedWorkspaceId();
+    if (locked && normalized !== locked) throw new Error("Codgram is locked to the project selected in the desktop shell.");
+    return resolveInside(this.root(), normalized);
   }
 
   private filePath(workspaceId: string, relativePath: string): string {
@@ -57,6 +60,13 @@ export class WorkspaceService {
 
   async listWorkspaces() {
     const root = this.root();
+    const locked = getLockedWorkspaceId();
+    if (locked) {
+      const target = this.workspacePath(locked);
+      const stat = await fs.stat(target);
+      if (!stat.isDirectory()) throw new Error("The Codgram desktop project selection is not a directory.");
+      return [{ id: locked, name: locked }];
+    }
     const entries = await fs.readdir(root, { withFileTypes: true });
     const workspaces = await Promise.all(entries.filter(entry => entry.isDirectory() && !entry.name.startsWith(".")).map(async entry => {
       const target = path.join(root, entry.name);

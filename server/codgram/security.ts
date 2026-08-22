@@ -24,6 +24,11 @@ export function getWorkspaceRoot(): string {
   return path.resolve(process.env.CODGRAM_WORKSPACE_ROOT || process.env.CORTEX_WORKSPACE_ROOT || process.cwd());
 }
 
+export function getLockedWorkspaceId(): string | null {
+  const configured = process.env.CODGRAM_WORKSPACE_ID?.trim();
+  return configured ? normalizeWorkspaceId(configured) : null;
+}
+
 export function normalizeWorkspaceId(value: string): string {
   const normalized = value.replace(/\\/g, "/").replace(/^\.\//, "");
   if (!normalized || normalized === "." || path.isAbsolute(normalized)) {

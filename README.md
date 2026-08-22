@@ -35,6 +35,19 @@ For the V1-to-Codgram migration only, the previous `CORTEX_*` environment variab
 
 Codgram also supports the platform-provided built-in provider in the managed development environment. Use the Settings view to select the provider and active model; credentials are intentionally not configurable in the interface.
 
+## V2 native desktop shell
+
+Codgram V2 includes an Electron desktop shell for **direct project-folder selection**. Start it from a local clone on the same computer that holds your trusted projects:
+
+```bash
+pnpm install
+pnpm desktop:dev
+```
+
+Use **Choose folder directly** in the desktop dashboard and select the project directory itself. Codgram starts its local server with the selected project’s parent directory as the workspace root and locks the session to that one project identifier. The renderer has no Node.js access: its narrow preload bridge can only request workspace state or open the operating-system directory chooser. The selected filesystem path is not displayed in the dashboard or passed to the model.
+
+The initial V2 shell is a local development shell rather than a signed installer. Before distributing a packaged desktop application, add platform-specific code signing, updater configuration, and packaging metadata.
+
 ## Safety controls
 
 Codgram permits directory listing, reading, searching, tracked writing, exact-text editing, and deletion only inside the selected workspace. It blocks `.env` files, credential-like files, private keys, Git metadata, dependency directories, and common build outputs from agent context. Delete operations, dependency changes, local branch creation, and local commits require an explicit confirmation dialog. Codgram never calls a Git push command and does not implement deployment tools.
@@ -53,6 +66,7 @@ Run the following before using Codgram against a valuable project.
 pnpm check
 pnpm test
 pnpm build
+pnpm desktop:check
 ```
 
 The test suite covers workspace containment, secret redaction, command classification, selective context assembly, structured-tool-call failures, confirmation approval and rejection, recoverable tool errors, and a successful model-guided file-change loop.

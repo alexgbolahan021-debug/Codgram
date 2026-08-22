@@ -1,0 +1,3 @@
+# Codgram V2 Desktop Smoke-Test Record
+
+The Electron shell was launched under a virtual display on 2026-08-22. The Codgram desktop window rendered with the **Native desktop** status and the **Choose folder directly** control. Activating the control opened the operating-system project-folder picker titled **Choose a Codgram project folder**. A visible temporary project named `CodgramDesktopSmoke` was selected in that picker, and the native **Select Folder** action received focus. The virtual-display interaction confirms that the native dialog receives the selection, although automated GTK chooser activation remained unreliable in the sandbox; the selection-to-server handoff and lock enforcement are covered by the deterministic desktop and workspace test suites.
