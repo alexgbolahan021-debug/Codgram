@@ -29,6 +29,8 @@ The V2.1 package configuration produces the following installer artifacts in `re
 
 For a fast local packaging smoke check that does not create an installer, run `pnpm desktop:build`. Build distributable artifacts on their native operating system in CI or on a release machine whenever practical. macOS signing and notarization require an Apple signing identity and the applicable Apple credentials; Windows distribution requires an Authenticode signing certificate. Electron Builder accepts these secrets from the release environment, commonly through `CSC_LINK` and `CSC_KEY_PASSWORD`; macOS notarization additionally requires the Apple credentials supported by the release process. Do not commit certificates, passwords, Apple credentials, or provider credentials to this repository.
 
+Codgram V2.2 includes a **manual, tag-driven GitHub Actions release workflow** that builds native macOS, Windows, and Linux artifacts, requires macOS/Windows signing, and creates a draft release for human review. Configure the required signing secrets before triggering it; see [Signed Release CI](docs/RELEASE_CI.md). The optional operating-system-keychain provider-secret design is documented separately in [Local Provider Secret Storage](docs/KEYCHAIN_SECRET_STORAGE.md); it is not enabled yet, so provider credentials remain server-side environment configuration.
+
 ## Local provider setup and desktop onboarding
 
 Start the development shell with:

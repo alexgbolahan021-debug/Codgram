@@ -52,3 +52,7 @@
 - [x] Verify V2.1 type checks, tests, desktop packaging configuration, production build, and dashboard flows.
 - [x] Verify the V2.1 desktop onboarding flow end to end, including local preference persistence and provider/model selection without credential entry.
 - [x] Verify the V2.1 rollback dashboard flow end to end, including confirmation, successful restore state, and conflict refusal feedback.
+- [x] Add a manual GitHub Actions release workflow for signed macOS and Windows installers plus Linux artifacts.
+- [x] Document the exact GitHub Actions secrets and release-environment prerequisites for macOS notarization and Windows code signing without storing secret values in the repository.
+- [x] Define the optional Electron safeStorage/keychain design for local provider credentials, keeping raw values outside renderer APIs, UI state, logs, and persisted settings.
+- [x] Validate the release workflow and release documentation, then synchronize the V2.2 update to the Codgram GitHub repository.
