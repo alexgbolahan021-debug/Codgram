@@ -127,10 +127,25 @@ function createWindow() {
   });
 }
 
+async function loadWorkspacePage() {
+  await mainWindow.loadURL(`${serverUrl}/?workspace=${encodeURIComponent(workspaceState.getWorkspaceId() || "")}`);
+  if (process.env.CODGRAM_DESKTOP_UI_ASSERT !== "1" || !workspaceState.getWorkspaceId()) return;
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const renderedText = await mainWindow.webContents.executeJavaScript("document.body.innerText");
+    if (renderedText.includes(workspaceState.getWorkspaceId())) {
+      console.log(`[Codgram desktop UI assertion] selected workspace visible: ${workspaceState.getWorkspaceId()}`);
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, 125));
+  }
+  throw new Error("Codgram desktop renderer did not display the selected workspace.");
+}
+
 const chooseProjectFolder = createWorkspaceSelectionHandler({
   showOpenDialog: dialog.showOpenDialog,
   restartServer: startServer,
-  reloadWindow: () => mainWindow.loadURL(serverUrl),
+  reloadWindow: loadWorkspacePage,
   setWorkspaceId: workspaceId => workspaceState.setWorkspaceId(workspaceId),
 });
 
@@ -141,7 +156,13 @@ app.whenReady().then(async () => {
   app.setName("Codgram");
   createWindow();
   await startServer(projectRoot);
-  await mainWindow.loadURL(serverUrl);
+  const smokeProject = process.env.CODGRAM_DESKTOP_SMOKE_PROJECT;
+  if (smokeProject) {
+    const selection = toWorkspaceSelection(smokeProject);
+    workspaceState.setWorkspaceId(selection.workspaceId);
+    await startServer(selection.workspaceRoot);
+  }
+  await loadWorkspacePage();
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 }).catch(error => {
   dialog.showErrorBox("Codgram could not start", error instanceof Error ? error.message : "Unknown local runtime error.");

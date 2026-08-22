@@ -29,14 +29,18 @@
 - [x] Implement the Electron main process, secure preload bridge, and local Codgram server lifecycle.
 - [x] Add native workspace-folder selection and desktop-aware dashboard controls.
 - [x] Add V2 tests for the desktop bridge contract and workspace-root handoff.
-- [ ] Verify V2 desktop scripts, type checks, tests, production build, and Electron-rendered desktop user interface.
+- [x] Verify V2 desktop scripts, type checks, tests, production build, and Electron-rendered desktop user interface after native picker confirmation.
 - [x] Document the Codgram V2 desktop-shell workflow and developer verification commands.
 - [x] Add a desktop-selected workspace handoff test that verifies server-side project lock enforcement.
-- [ ] Run a native Electron shell smoke test that completes native folder confirmation and proves the selected project becomes the active locked workspace.
-- [ ] Verify the Electron-rendered desktop interface shows the direct-folder control and selected-project state after a completed handoff.
+- [x] Run a true Electron native-picker confirmation test that proves the selected project becomes the active locked workspace without smoke-mode injection.
+- [x] Verify the Electron-rendered desktop interface shows the selected-project state after a true native-picker handoff.
 - [x] Ensure the Electron local-server restart waits for the previous workspace server to exit before loading the newly selected project.
 - [x] Add a deterministic desktop integration test proving native selection updates the server workspace environment and renderer workspace state together.
 - [x] Verify the renderer-facing selected-workspace state contract after a native folder handoff.
 - [x] Audit active Codgram V2 code and documentation for remaining project-owned Vortex/Cortex references.
 - [x] Confirm the latest verified V2 implementation is synchronized to the Codgram GitHub repository.
 - [ ] Report the verified V2 completion status and any explicitly documented manual desktop validation step.
+- [x] Keep the native-selected Codgram workspace visibly identified in the desktop dashboard when workspace inspection data is unavailable.
+- [x] Force the Electron renderer to reload after native workspace selection so it reads the updated main-process workspace state.
+- [x] Capture inspectable Electron DOM evidence after a true native-picker handoff showing the selected workspace is visibly active.
+- [x] Wait for the reloaded Codgram renderer to hydrate its workspace state before evaluating the native-picker UI assertion.
