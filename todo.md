@@ -1,0 +1,27 @@
+# Project TODO
+
+- [x] Define safe local-first workspace, command, Git, provider, and history domain models.
+- [x] Implement a bounded workspace tool layer for list, read, search, write, edit, delete, and change tracking.
+- [x] Implement terminal and Git execution layers with validation, redaction, destructive-command confirmation, no push/deploy safeguards, and execution logs.
+- [x] Implement the model provider abstraction, server-side settings, structured tool-call parsing, context management, and bounded agent loop.
+- [x] Implement persisted local task history, activities, file changes, command results, and final reports.
+- [x] Build the desktop-style Codgram dashboard with workspace selection, task entry, settings, live activity stream, stop control, confirmations, review, and history views.
+- [x] Support a configurable server-side OpenAI-compatible provider without surfacing provider credentials in the dashboard or logs.
+- [x] Add comprehensive unit tests for safety boundaries, command classification, structured decisions, and agent runtime behavior.
+- [x] Run type checks, tests, and build; resolve all critical findings.
+- [x] Document safe local configuration and operating instructions without exposing secrets.
+- [x] Persist redacted Git tool executions in each run’s reviewable execution history.
+- [x] Implement selective context assembly and pruning for each model turn.
+- [x] Add edge-case tests for malformed tool calls, approval and rejection flows, and recoverable runtime errors.
+- [x] Run an isolated end-to-end agent smoke test against a temporary project and record the outcome.
+- [x] Handle tool-call model responses that omit textual content, then re-run the real-provider smoke test.
+- [x] Ensure the standalone real-provider smoke-test harness terminates after recording its result.
+- [x] Reject a model finish request for a mutation task until Codgram has recorded a corresponding workspace change.
+- [x] Inventory and classify every project-owned Cortex identifier before the Codgram migration.
+- [x] Document and classify the remaining managed workspace metadata and generated template snapshot references, including safe manual or framework-regeneration steps where source-level renaming is not supported.
+- [x] Rename the active application, package, runtime, configuration, UI, tests, documentation, and user-facing metadata to Codgram.
+- [x] Support CODGRAM environment variables with temporary CORTEX fallback where needed for V1 migration compatibility.
+- [x] Verify all remaining historical references, UI identity, type checks, tests, production build, and an end-to-end smoke run before V2 development begins.
+- [x] Inspect the target Codgram GitHub repository and compare it with the verified workspace.
+- [ ] Safely transfer the verified Codgram codebase to the target GitHub repository without overwriting unrelated content.
+- [ ] Verify the target repository commit and remote branch after the transfer.
