@@ -44,3 +44,11 @@
 - [x] Force the Electron renderer to reload after native workspace selection so it reads the updated main-process workspace state.
 - [x] Capture inspectable Electron DOM evidence after a true native-picker handoff showing the selected workspace is visibly active.
 - [x] Wait for the reloaded Codgram renderer to hydrate its workspace state before evaluating the native-picker UI assertion.
+- [x] Assess the current Codgram desktop, history, provider, and review architecture for V2.1 extensions.
+- [x] Configure signed-ready installer targets for macOS, Windows, and Linux with production packaging scripts.
+- [x] Implement per-run pre-change rollback checkpoints with safe restore confirmation and review visibility.
+- [x] Implement a native desktop onboarding flow for safe provider selection and server-side configuration guidance.
+- [x] Add unit coverage for rollback checkpointing, restore safety, onboarding state, and desktop packaging configuration.
+- [x] Verify V2.1 type checks, tests, desktop packaging configuration, production build, and dashboard flows.
+- [x] Verify the V2.1 desktop onboarding flow end to end, including local preference persistence and provider/model selection without credential entry.
+- [x] Verify the V2.1 rollback dashboard flow end to end, including confirmation, successful restore state, and conflict refusal feedback.

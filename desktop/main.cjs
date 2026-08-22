@@ -96,8 +96,9 @@ async function startServer(workspaceRoot) {
     isPackaged: app.isPackaged,
   });
   const command = app.isPackaged ? process.execPath : packageCommand();
-  const args = app.isPackaged ? [path.join(projectRoot, "dist", "index.js")] : ["dev"];
-  serverProcess = spawn(command, args, { cwd: projectRoot, env: environment, stdio: ["ignore", "pipe", "pipe"], windowsHide: true, detached: process.platform !== "win32" });
+  const args = app.isPackaged ? [path.join(projectRoot, "dist", "index.js")] : process.env.CODGRAM_DESKTOP_V21_UI_SMOKE ? ["exec", "tsx", "server/_core/index.ts"] : ["dev"];
+  const smokeStdio = process.env.CODGRAM_DESKTOP_V21_UI_SMOKE ? "inherit" : ["ignore", "pipe", "pipe"];
+  serverProcess = spawn(command, args, { cwd: projectRoot, env: environment, stdio: smokeStdio, windowsHide: true, detached: process.platform !== "win32" });
   serverProcess.once("exit", () => { serverProcess = null; });
   await waitForServer();
 }
@@ -142,6 +143,75 @@ async function loadWorkspacePage() {
   throw new Error("Codgram desktop renderer did not display the selected workspace.");
 }
 
+function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function waitForRendererText(text, timeoutMs = 8_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const renderedText = await mainWindow.webContents.executeJavaScript("document.body.innerText");
+    if (renderedText.includes(text)) return;
+    await wait(125);
+  }
+  const snapshot = await mainWindow.webContents.executeJavaScript("document.body.innerText");
+  throw new Error(`Codgram desktop renderer did not display: ${text}. Rendered text: ${snapshot.slice(0, 1_500)}`);
+}
+
+async function clickRendererButton(label) {
+  const clicked = await mainWindow.webContents.executeJavaScript(`(() => {
+    const button = [...document.querySelectorAll("button")].find(item => item.innerText.trim() === ${JSON.stringify(label)});
+    if (!button) return false;
+    button.click();
+    return true;
+  })()`);
+  if (!clicked) throw new Error(`Codgram desktop renderer did not expose the ${label} button.`);
+}
+
+async function clickRendererButtonContaining(text) {
+  const clicked = await mainWindow.webContents.executeJavaScript(`(() => {
+    const button = [...document.querySelectorAll("button")].find(item => item.innerText.includes(${JSON.stringify(text)}));
+    if (!button) return false;
+    button.click();
+    return true;
+  })()`);
+  if (!clicked) throw new Error(`Codgram desktop renderer did not expose a button containing ${text}.`);
+}
+
+async function setRendererModel(value) {
+  const updated = await mainWindow.webContents.executeJavaScript(`(() => {
+    const selects = [...document.querySelectorAll("select")];
+    const select = selects.find(item => [...item.options].some(option => option.value === ${JSON.stringify(value)}));
+    if (!select || ![...select.options].some(option => option.value === ${JSON.stringify(value)})) return false;
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set;
+    setter.call(select, ${JSON.stringify(value)});
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  })()`);
+  if (!updated) throw new Error(`Codgram desktop renderer did not expose the ${value} model option.`);
+}
+
+async function runV21UiSmoke() {
+  const mode = process.env.CODGRAM_DESKTOP_V21_UI_SMOKE;
+  if (!mode) return;
+  await waitForRendererText("Prepare your local agent");
+  await clickRendererButtonContaining("OpenAI-compatible endpoint");
+  await clickRendererButton("Continue");
+  await waitForRendererText("Confirm your local configuration");
+  await setRendererModel("smoke-coder");
+  const credentialInputs = await mainWindow.webContents.executeJavaScript("document.querySelectorAll('input[type=password], input[name*=\"key\" i], input[autocomplete*=\"key\" i]').length");
+  if (credentialInputs) throw new Error("Codgram onboarding rendered a credential input, which is not permitted.");
+  await clickRendererButton("Finish setup");
+  await mainWindow.reload();
+  await waitForRendererText("RUN CHECKPOINT");
+  const onboardingStillVisible = await mainWindow.webContents.executeJavaScript("document.body.innerText.includes('Prepare your local agent')");
+  if (onboardingStillVisible) throw new Error("Codgram onboarding reappeared after its completed local setting was reloaded.");
+  await clickRendererButton("Restore checkpoint");
+  await waitForRendererText("Revert this run’s tracked files?");
+  await clickRendererButton("Restore files");
+  if (mode === "conflict") await waitForRendererText("will not overwrite a newer change");
+  else await waitForRendererText("Checkpoint restored");
+  console.log(`[Codgram desktop V2.1 UI smoke] ${mode} flow passed`);
+}
+
 const chooseProjectFolder = createWorkspaceSelectionHandler({
   showOpenDialog: dialog.showOpenDialog,
   restartServer: startServer,
@@ -163,8 +233,15 @@ app.whenReady().then(async () => {
     await startServer(selection.workspaceRoot);
   }
   await loadWorkspacePage();
+  await runV21UiSmoke();
+  if (process.env.CODGRAM_DESKTOP_V21_UI_SMOKE) app.quit();
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 }).catch(error => {
+  if (process.env.CODGRAM_DESKTOP_V21_UI_SMOKE) {
+    console.error("[Codgram desktop V2.1 UI smoke failure]", error instanceof Error ? error.stack : error);
+    app.quit();
+    return;
+  }
   dialog.showErrorBox("Codgram could not start", error instanceof Error ? error.message : "Unknown local runtime error.");
   app.quit();
 });

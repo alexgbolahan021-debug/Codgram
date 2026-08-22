@@ -81,7 +81,7 @@ export class LocalHistoryStore {
     try {
       const raw = await fs.readFile(this.settingsPath, "utf8");
       const value = JSON.parse(raw) as Partial<CodgramSettings>;
-      return { ...DEFAULT_SETTINGS, ...value, provider: "manus-built-in" };
+      return { ...DEFAULT_SETTINGS, ...value };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return DEFAULT_SETTINGS;
       throw new Error("Codgram could not read its local settings.");

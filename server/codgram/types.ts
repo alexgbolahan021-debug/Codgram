@@ -40,6 +40,21 @@ export type FileChange = {
   at: string;
 };
 
+export type RollbackEntry = {
+  path: string;
+  before: string | null;
+  expectedAfter: string | null;
+};
+
+export type RollbackCheckpoint = {
+  id: string;
+  createdAt: string;
+  status: "ready" | "restored";
+  entries: RollbackEntry[];
+  restoredAt?: string;
+  restoreSummary?: string;
+};
+
 export type CommandResult = {
   id: string;
   command: string;
@@ -91,6 +106,7 @@ export type CodgramRun = {
   inspection: WorkspaceInspection | null;
   activities: RunActivity[];
   changes: FileChange[];
+  rollbackCheckpoint: RollbackCheckpoint;
   commands: CommandResult[];
   pendingAction: PendingAction | null;
   iteration: number;
@@ -105,6 +121,7 @@ export type CodgramSettings = {
   maxIterations: number;
   confirmationMode: "dangerous-only" | "all-writes";
   theme: "dark" | "system";
+  onboardingCompleted: boolean;
 };
 
 export type ToolExecutionResult = {
@@ -121,4 +138,5 @@ export const DEFAULT_SETTINGS: CodgramSettings = {
   maxIterations: 12,
   confirmationMode: "dangerous-only",
   theme: "dark",
+  onboardingCompleted: false,
 };

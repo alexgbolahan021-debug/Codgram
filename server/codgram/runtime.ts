@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { createRollbackCheckpoint, recordRollbackChange } from "./checkpoint";
 import { AgentContextManager } from "./context";
 import { localHistory } from "./history";
 import { writeLocalLog } from "./logger";
@@ -43,7 +44,7 @@ export class CodgramRuntime {
     const now = new Date().toISOString();
     const run: CodgramRun = {
       id: randomUUID(), workspaceId, workspaceName: inspection.name, task: task.trim(), status: "planning", createdAt: now, updatedAt: now,
-      inspection, plan: null, activities: [activity("info", "Workspace selected", `${inspection.framework} · ${inspection.language}${inspection.packageManager ? ` · ${inspection.packageManager}` : ""}`)], changes: [], commands: [], pendingAction: null, iteration: 0, stopRequested: false, finalReport: null, error: null,
+      inspection, plan: null, activities: [activity("info", "Workspace selected", `${inspection.framework} · ${inspection.language}${inspection.packageManager ? ` · ${inspection.packageManager}` : ""}`)], changes: [], rollbackCheckpoint: createRollbackCheckpoint(), commands: [], pendingAction: null, iteration: 0, stopRequested: false, finalReport: null, error: null,
     };
     await localHistory.createRun(run);
     this.sessions.set(run.id, { context: new AgentContextManager(run.task, inspection) });
@@ -148,7 +149,12 @@ export class CodgramRuntime {
   }
 
   private async recordResult(runId: string, result: Awaited<ReturnType<typeof executeCodgramTool>>) {
-    await this.patchRun(runId, run => ({ ...run, changes: result.change ? [...run.changes, result.change] : run.changes, commands: result.command ? [...run.commands, result.command] : run.commands }));
+    await this.patchRun(runId, run => ({
+      ...run,
+      changes: result.change ? [...run.changes, result.change] : run.changes,
+      rollbackCheckpoint: result.change ? recordRollbackChange(run.rollbackCheckpoint, result.change) : run.rollbackCheckpoint,
+      commands: result.command ? [...run.commands, result.command] : run.commands,
+    }));
     if (result.change) await this.addActivity(runId, activity("success", `File ${result.change.kind}`, result.change.path, "file_change"));
     if (result.command) await this.addActivity(runId, activity(result.command.exitCode === 0 ? "success" : "error", "Command finished", `${result.command.command} · exit ${result.command.exitCode ?? "stopped"} · ${(result.command.durationMs / 1000).toFixed(1)}s`, "terminal"));
   }
@@ -182,6 +188,19 @@ export class CodgramRuntime {
     const run = await this.patchRun(runId, current => ({ ...current, stopRequested: true, status: "stopped", completedAt: new Date().toISOString(), pendingAction: null, finalReport: fallbackReport(current, "Codgram was stopped by the user. No further actions will run.") }));
     await this.addActivity(runId, activity("warning", "Codgram stopped", "The current run will not make another tool request."));
     return run;
+  }
+
+  async rollback(runId: string): Promise<CodgramRun> {
+    const run = await localHistory.getRun(runId);
+    if (!run) throw new Error("Codgram run was not found.");
+    if (!["completed", "failed", "stopped"].includes(run.status)) throw new Error("Codgram only restores checkpoints after a run has stopped.");
+    if (run.rollbackCheckpoint.status !== "ready") throw new Error("This run checkpoint has already been restored.");
+    const restored = await workspaceService.restoreCheckpoint(run.workspaceId, run.rollbackCheckpoint.entries);
+    const summary = `Restored ${restored.length} tracked file change${restored.length === 1 ? "" : "s"} to the state before this run.`;
+    await this.patchRun(runId, current => ({ ...current, rollbackCheckpoint: { ...current.rollbackCheckpoint, status: "restored", restoredAt: new Date().toISOString(), restoreSummary: summary } }));
+    await this.addActivity(runId, activity("success", "Checkpoint restored", summary, "rollback"));
+    await writeLocalLog("agent.rollback", { runId, workspaceId: run.workspaceId, restoredFiles: restored.map(change => change.path) });
+    return (await localHistory.getRun(runId))!;
   }
 
   private async complete(runId: string, finishSummary?: string, limitNote?: string) {

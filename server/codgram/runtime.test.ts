@@ -10,7 +10,7 @@ const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "codgram-runtime-"));
 process.env.CODGRAM_WORKSPACE_ROOT = tempRoot;
 process.env.CODGRAM_DATA_DIR = path.join(tempRoot, ".codgram-data");
 
-const settings: CodgramSettings = { provider: "manus-built-in", model: "default", maxIterations: 6, confirmationMode: "dangerous-only", theme: "dark" };
+const settings: CodgramSettings = { provider: "manus-built-in", model: "default", maxIterations: 6, confirmationMode: "dangerous-only", theme: "dark", onboardingCompleted: true };
 
 const provider: AgentProvider = {
   listModels: async () => ["test-model"],
@@ -61,6 +61,29 @@ describe("Codgram agent runtime", () => {
     expect(completed.changes[0]).toMatchObject({ path: "src/hello.ts", kind: "created" });
     expect(await fs.readFile(path.join(tempRoot, "sample-project", "src", "hello.ts"), "utf8")).toContain("codgram");
     expect(completed.activities.some(entry => entry.title === "Plan created")).toBe(true);
+  });
+
+  it("restores a completed run’s tracked pre-change checkpoint once", async () => {
+    let decisionCount = 0;
+    const rollbackProvider: AgentProvider = {
+      ...provider,
+      nextDecision: async () => {
+        decisionCount += 1;
+        return decisionCount === 1
+          ? { text: "I will create the rollback file.", toolCalls: [{ id: "write-rollback", type: "function", function: { name: "write_file", arguments: JSON.stringify({ path: "src/rollback.ts", content: "export const rollback = true;\n" }) } }] }
+          : { text: "The rollback file is recorded.", toolCalls: [{ id: "finish-rollback", type: "function", function: { name: "finish", arguments: JSON.stringify({ summary: "Created the rollback file." }) } }] };
+      },
+    };
+    const runtime = new CodgramRuntime(rollbackProvider);
+    const started = await runtime.start("sample-project", "Create a source file that can be rolled back.");
+    const completed = await waitForCompletion(runtime, started.id);
+    expect(completed.rollbackCheckpoint.entries).toContainEqual(expect.objectContaining({ path: "src/rollback.ts", before: null }));
+
+    const restored = await runtime.rollback(started.id);
+
+    expect(restored.rollbackCheckpoint.status).toBe("restored");
+    await expect(fs.access(path.join(tempRoot, "sample-project", "src", "rollback.ts"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(runtime.rollback(started.id)).rejects.toThrow(/already been restored/i);
   });
 
   it("defers a finish request until a mutation task has a recorded workspace change", async () => {

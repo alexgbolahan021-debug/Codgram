@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { getLockedWorkspaceId, getWorkspaceRoot, isIgnoredWorkspacePath, isSensitivePath, normalizeWorkspaceId, resolveInside } from "./security";
-import type { FileChange, WorkspaceInspection } from "./types";
+import type { FileChange, RollbackEntry, WorkspaceInspection } from "./types";
 
 const MAX_FILE_BYTES = 256 * 1024;
 const MAX_TREE_ITEMS = 80;
@@ -173,6 +173,37 @@ export class WorkspaceService {
       diff: createDiff(relativePath, before, null),
       at: new Date().toISOString(),
     };
+  }
+
+  async restoreCheckpoint(workspaceId: string, entries: RollbackEntry[]): Promise<FileChange[]> {
+    if (!entries.length) throw new Error("This run has no tracked file changes to restore.");
+    const prepared = await Promise.all(entries.map(async entry => {
+      const target = this.filePath(workspaceId, entry.path);
+      const current = await exists(target) ? await readText(target) : null;
+      if (current !== entry.expectedAfter) {
+        throw new Error(`Codgram will not overwrite a newer change in ${entry.path}. Review the file before attempting another rollback.`);
+      }
+      return { entry, target, current };
+    }));
+
+    const restored: FileChange[] = [];
+    for (const { entry, target, current } of prepared) {
+      if (entry.before === null) await fs.unlink(target);
+      else {
+        await fs.mkdir(path.dirname(target), { recursive: true });
+        await fs.writeFile(target, entry.before, "utf8");
+      }
+      restored.push({
+        id: randomUUID(),
+        path: entry.path,
+        kind: entry.before === null ? "deleted" : current === null ? "created" : "edited",
+        before: current,
+        after: entry.before,
+        diff: createDiff(entry.path, current, entry.before),
+        at: new Date().toISOString(),
+      });
+    }
+    return restored;
   }
 
   async inspect(workspaceId: string): Promise<WorkspaceInspection> {

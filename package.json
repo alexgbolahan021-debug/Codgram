@@ -1,12 +1,25 @@
 {
   "name": "codgram",
-  "version": "1.0.0",
+  "version": "2.1.0",
+  "description": "A safe local AI coding agent for desktop workspaces.",
+  "author": "Codgram",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexgbolahan021-debug/Codgram.git"
+  },
   "type": "module",
+  "main": "desktop/main.cjs",
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
     "desktop:dev": "electron desktop/main.cjs",
     "desktop:check": "node --check desktop/main.cjs && node --check desktop/preload.cjs && node --check desktop/contract.cjs && node --check desktop/runtime.cjs && node --check desktop/environment.cjs && node --check desktop/state.cjs",
+    "desktop:smoke:v21": "node desktop/v21-ui-smoke.cjs",
+    "desktop:build": "pnpm build && electron-builder --dir",
+    "desktop:package": "pnpm build && electron-builder --mac --win --linux",
+    "desktop:package:mac": "pnpm build && electron-builder --mac dmg zip",
+    "desktop:package:win": "pnpm build && electron-builder --win nsis",
+    "desktop:package:linux": "pnpm build && electron-builder --linux AppImage deb rpm",
     "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
@@ -94,6 +107,7 @@
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.31.4",
     "electron": "^43.4.1",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.25.0",
     "pnpm": "^10.15.1",
     "postcss": "^8.4.47",
@@ -105,6 +119,45 @@
     "vite": "^7.1.7",
     "vite-plugin-manus-runtime": "0.0.59",
     "vitest": "^2.1.4"
+  },
+  "build": {
+    "appId": "im.codgram.desktop",
+    "productName": "Codgram",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "desktop/build-resources"
+    },
+    "files": [
+      "dist/**/*",
+      "desktop/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": ["dmg", "zip"],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "desktop/build-resources/entitlements.mac.plist",
+      "entitlementsInherit": "desktop/build-resources/entitlements.mac.plist"
+    },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64", "arm64"] }],
+      "signtoolOptions": {
+        "publisherName": "Codgram"
+      }
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "linux": {
+      "target": ["AppImage", "deb", "rpm"],
+      "category": "Development"
+    }
   },
   "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
   "pnpm": {

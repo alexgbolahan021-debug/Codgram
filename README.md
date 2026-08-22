@@ -1,76 +1,86 @@
-# Codgram V1
+# Codgram V2.1
 
-Codgram is a **local-first personal AI coding-agent dashboard**. It inspects a selected project inside an explicitly configured workspace root, creates a reviewable plan, applies tracked edits, runs bounded development commands, and produces a concise completion report. Codgram is deliberately not a multi-user service, deployment platform, or autonomous remote operator.
+Codgram is a **local-first, personal AI coding agent** for a single developer’s projects. It runs on the same computer as the projects it inspects, plans and applies bounded changes in one selected workspace, records reviewable evidence, and never automatically pushes or deploys.
 
-> **Run Codgram on the same computer that holds the projects you intend it to inspect.** A hosted deployment cannot safely access your local folders or terminal and is not an appropriate operating mode for this application.
+> **Use Codgram only on a computer you control and only with projects you trust.** It is not a hosted repository operator or multi-user service.
 
-## Operating model
+## Safety model
 
 | Stage | Codgram behavior | Safety boundary |
 | --- | --- | --- |
-| Inspect | Detects project markers, framework, language, package manager, and Git availability. | Only projects directly beneath `CODGRAM_WORKSPACE_ROOT` are selectable. |
-| Plan | Requests a concise implementation plan from the configured provider. | Relevant inspection data and recent redacted observations are selectively assembled; the whole repository is not sent to the model. |
-| Act | Uses structured workspace, terminal, and Git tools. | File paths must resolve inside the selected workspace. Secret-bearing files and generated/dependency directories are blocked. |
-| Verify | Records build, test, lint, typecheck, and Git inspection output. | Shell chaining, arbitrary executables, development servers, remote push, and deployment are blocked. |
-| Review | Persists activities, file changes, diffs, commands, and a final report locally. | Logs redact secret-shaped values and private-key material. |
+| Workspace selection | Inspects a selected local project. | The desktop shell selects a directory through the operating system and locks the runtime to that project. |
+| Planning | Builds a concise plan from limited, redacted project context. | Codgram does not send the full repository by default. |
+| Changes | Uses structured file, terminal, and Git tools. | File paths remain inside the selected workspace; secrets, private keys, dependency directories, Git metadata, and common outputs are blocked. |
+| Confirmation | Pauses before higher-impact local operations. | Deletes, dependency changes, local branches, and local commits require explicit approval. |
+| Review and rollback | Saves activities, diffs, command outcomes, reports, and a pre-change file checkpoint locally. | Rollback is explicit, one-time, workspace-bounded, and rejects conflicts rather than overwriting newer work. |
 
-## Local setup
+## Desktop application and installers
 
-Install dependencies and point Codgram at a directory containing the projects you trust it to work on. The workspace root should contain project folders directly, such as `/Users/you/Projects/my-app` or `/home/you/Projects/my-app`.
+Codgram ships an Electron desktop shell with context isolation, no renderer Node.js access, and a narrow bridge limited to reading selected-workspace state and opening the operating-system folder picker. Choose the project directory itself with **Choose folder directly**; the shell starts the local server using that project’s parent as its workspace root and locks the session to the selected project.
 
-```bash
-pnpm install
-CODGRAM_WORKSPACE_ROOT=/absolute/path/to/your/projects pnpm dev
-```
+The V2.1 package configuration produces the following installer artifacts in `release/`.
 
-| Variable | Required | Purpose |
+| Platform | Artifacts | Command |
 | --- | --- | --- |
-| `CODGRAM_WORKSPACE_ROOT` | Yes | Absolute path of the trusted parent directory containing selectable projects. Codgram rejects traversal outside this directory. |
-| `CODGRAM_DATA_DIR` | Optional | Location for local settings, run history, and redacted NDJSON logs. Defaults to `~/.codgram`. |
-| `CODGRAM_OPENAI_BASE_URL` | Only for the OpenAI-compatible provider | API base URL, without a trailing slash. |
-| `CODGRAM_OPENAI_API_KEY` | Only for the OpenAI-compatible provider | Server-only API credential. Never put it in the dashboard, browser storage, Git, run history, or logs. |
-| `CODGRAM_OPENAI_MODEL` | Only for the OpenAI-compatible provider | Default model ID used when the dashboard model choice is `default`. |
+| macOS | DMG and ZIP | `pnpm desktop:package:mac` |
+| Windows | NSIS installer for x64 and ARM64 | `pnpm desktop:package:win` |
+| Linux | AppImage, DEB, and RPM | `pnpm desktop:package:linux` |
+| All configured targets | Platform-specific artifacts | `pnpm desktop:package` |
 
-For the V1-to-Codgram migration only, the previous `CORTEX_*` environment variables remain accepted as a lower-priority fallback when their `CODGRAM_*` replacement is absent. Set the `CODGRAM_*` names for all new local setups; the fallback may be removed in a future major version.
+For a fast local packaging smoke check that does not create an installer, run `pnpm desktop:build`. Build distributable artifacts on their native operating system in CI or on a release machine whenever practical. macOS signing and notarization require an Apple signing identity and the applicable Apple credentials; Windows distribution requires an Authenticode signing certificate. Electron Builder accepts these secrets from the release environment, commonly through `CSC_LINK` and `CSC_KEY_PASSWORD`; macOS notarization additionally requires the Apple credentials supported by the release process. Do not commit certificates, passwords, Apple credentials, or provider credentials to this repository.
 
-Codgram also supports the platform-provided built-in provider in the managed development environment. Use the Settings view to select the provider and active model; credentials are intentionally not configurable in the interface.
+## Local provider setup and desktop onboarding
 
-## V2 native desktop shell
-
-Codgram V2 includes an Electron desktop shell for **direct project-folder selection**. Start it from a local clone on the same computer that holds your trusted projects:
+Start the development shell with:
 
 ```bash
 pnpm install
 pnpm desktop:dev
 ```
 
-Use **Choose folder directly** in the desktop dashboard and select the project directory itself. Codgram starts its local server with the selected project’s parent directory as the workspace root and locks the session to that one project identifier. The renderer has no Node.js access: its narrow preload bridge can only request workspace state or open the operating-system directory chooser. The selected filesystem path is not displayed in the dashboard or passed to the model.
+On first native desktop launch, Codgram presents a short onboarding flow that lets the user select the built-in provider or an OpenAI-compatible endpoint, choose a model preference, and retain the selected safety settings locally. The onboarding interface **never asks for, stores, renders, or logs a raw API key**. Model availability is queried by the local server, not by browser code.
 
-The initial V2 shell is a local development shell rather than a signed installer. Before distributing a packaged desktop application, add platform-specific code signing, updater configuration, and packaging metadata.
+For an OpenAI-compatible provider, configure the local server environment before starting Codgram:
 
-## Safety controls
+```bash
+CODGRAM_WORKSPACE_ROOT=/absolute/path/to/your/projects \
+CODGRAM_OPENAI_BASE_URL=https://your-provider.example/v1 \
+CODGRAM_OPENAI_API_KEY=your-local-secret \
+CODGRAM_OPENAI_MODEL=your-model-id \
+pnpm desktop:dev
+```
 
-Codgram permits directory listing, reading, searching, tracked writing, exact-text editing, and deletion only inside the selected workspace. It blocks `.env` files, credential-like files, private keys, Git metadata, dependency directories, and common build outputs from agent context. Delete operations, dependency changes, local branch creation, and local commits require an explicit confirmation dialog. Codgram never calls a Git push command and does not implement deployment tools.
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `CODGRAM_WORKSPACE_ROOT` | Browser/local-server mode only | Absolute trusted parent directory containing selectable projects. The native shell derives this from the selected project. |
+| `CODGRAM_DATA_DIR` | No | Location for local settings, run history, and redacted logs. Defaults to `~/.codgram`. |
+| `CODGRAM_OPENAI_BASE_URL` | OpenAI-compatible provider only | Compatible API base URL, without a trailing slash. |
+| `CODGRAM_OPENAI_API_KEY` | OpenAI-compatible provider only | **Server-only local credential.** Never place it in the dashboard, browser storage, Git, run history, or logs. |
+| `CODGRAM_OPENAI_MODEL` | OpenAI-compatible provider only | Default model ID when the configured preference is `default`. |
 
-Terminal execution is restricted to a single `npm`, `pnpm`, `yarn`, or `bun` command and rejects shell separators, redirects, substitutions, arbitrary executables, and long-running development-server scripts. Each accepted command is time-bounded, redacted, and recorded for final review.
+For the V1 migration only, corresponding `CORTEX_*` variables remain lower-priority fallbacks when a `CODGRAM_*` variable is absent. New setups must use the Codgram names.
 
-## Current V1 scope
+## Per-run rollback checkpoints
 
-The local dashboard includes provider selection, safe workspace selection, stack inspection, model-guided planning, structured tool calls, confirmation pauses, a stop control, live activity history, diff review, local run history, and a provider-agnostic agent runtime. It does not package a native desktop shell yet. Run the dashboard locally in a browser as the first-stage local runtime.
+Codgram creates a rollback checkpoint when each run begins. For every tracked file mutation, it preserves the file’s state immediately before the run’s first change and records the latest file state expected after the run. The final review presents the affected-file count and an explicit **Restore checkpoint** action once the run has completed, failed, or been stopped.
 
-## Verification
+Restoring requires a second confirmation. Before changing anything, Codgram checks every tracked file still matches the run’s recorded post-change content. If any file differs, restore stops before writing any file and reports that it will not overwrite newer work. A successful checkpoint is intentionally one-time.
 
-Run the following before using Codgram against a valuable project.
+Rollback covers only tracked file changes. It cannot undo untracked terminal side effects, installed dependencies, database changes, network operations, or external services. Review the completion report and working tree before and after a restore.
+
+## Local development and verification
 
 ```bash
 pnpm check
 pnpm test
 pnpm build
 pnpm desktop:check
+pnpm desktop:smoke:v21
+pnpm exec electron-builder --dir --linux --x64
 ```
 
-The test suite covers workspace containment, secret redaction, command classification, selective context assembly, structured-tool-call failures, confirmation approval and rejection, recoverable tool errors, and a successful model-guided file-change loop.
+The test suite covers workspace containment, secret redaction, terminal/Git constraints, structured tool-call handling, confirmation outcomes, provider onboarding persistence without credential fields, installer configuration, checkpoint first-state capture, conflict-safe workspace restoration, and one-time runtime rollback. The native V2.1 smoke command uses isolated temporary data and projects to select the OpenAI-compatible provider and a model preference without a credential field, reload completed onboarding to prove it stays dismissed, and exercise both successful and conflict-refused checkpoint restoration.
 
 ## Recommended first run
 
-Start with a throwaway project inside `CODGRAM_WORKSPACE_ROOT`. Ask Codgram to inspect its architecture or make a small well-tested change. Review every file diff, terminal result, and final report before approving any higher-impact action.
+Use a throwaway project first. Ask Codgram to inspect the architecture or make a small well-tested change, review every tracked diff and command result, and test the checkpoint restore flow before using it on an important project.
