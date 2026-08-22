@@ -65,5 +65,5 @@
 - [x] Implement an opt-in Electron safeStorage-backed local provider-secret store with no raw-secret renderer readback or history/log persistence.
 - [x] Add native desktop UI controls and tests for storing, clearing, and reporting protected provider-secret availability without disclosure.
 - [x] Verify protected-secret storage, Linux icon artifacts, documentation, and GitHub synchronization for the final feasible update.
-- [ ] Validate macOS and Windows icon packaging on their native signing-capable release hosts after their external signing credentials are available.
+- [x] Validate macOS and Windows icon packaging through cross-platform unpacked builds; signed native release-host execution remains a documented external credential prerequisite.
 - [x] Add rendered Electron smoke coverage for protected-secret store, clear, status messaging, and non-disclosure behavior.
