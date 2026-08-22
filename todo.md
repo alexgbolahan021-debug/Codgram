@@ -68,6 +68,6 @@
 - [x] Validate macOS and Windows icon packaging through cross-platform unpacked builds; signed native release-host execution remains a documented external credential prerequisite.
 - [x] Add rendered Electron smoke coverage for protected-secret store, clear, status messaging, and non-disclosure behavior.
 - [x] Verify and push the approved `v2.2.0` release tag from the verified Codgram main commit.
-- [ ] Confirm the Linux-first GitHub Actions workflow starts and report the draft release status without publishing it.
-- [ ] Remove the GitHub Actions pnpm-version conflict, rerun the approved v2.2.0 Linux-first workflow, and verify its draft artifacts.
-- [ ] Add the required repository checkout to the GitHub release-publish job, then retry the approved v2.2.0 Linux-first workflow.
+- [x] Confirm the Linux-first GitHub Actions workflow starts and report the draft release status without publishing it.
+- [x] Remove the GitHub Actions pnpm-version conflict, rerun the approved v2.2.0 Linux-first workflow, and verify its draft artifacts.
+- [x] Add the required repository checkout to the GitHub release-publish job, then retry the approved v2.2.0 Linux-first workflow.
