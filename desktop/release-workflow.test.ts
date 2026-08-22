@@ -6,10 +6,13 @@ const workflowPath = path.resolve(import.meta.dirname, "..", ".github", "workflo
 const workflow = readFileSync(workflowPath, "utf8");
 
 describe("Codgram signed release workflow", () => {
-  it("uses native release jobs, required signing secrets, draft publishing, and explicit code-signing enforcement", () => {
+  it("uses a Linux-first release path while retaining explicit opt-in signed native jobs", () => {
     expect(workflow).toContain("tags:");
     expect(workflow).toContain('"v*.*.*"');
     expect(workflow).toContain("workflow_dispatch:");
+    expect(workflow).toContain("release_mode:");
+    expect(workflow).toContain("linux-first");
+    expect(workflow).toContain("full-signed");
     expect(workflow).toContain("runs-on: macos-latest");
     expect(workflow).toContain("runs-on: windows-latest");
     expect(workflow).toContain("runs-on: ubuntu-latest");
@@ -20,5 +23,7 @@ describe("Codgram signed release workflow", () => {
     expect(workflow).toContain("--publish never");
     expect(workflow).toContain("gh release create");
     expect(workflow).toContain("--draft");
+    expect(workflow).toContain("needs.linux.result == 'success'");
+    expect(workflow).toContain("Release tag must match package.json version");
   });
 });

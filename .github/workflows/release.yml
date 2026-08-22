@@ -1,4 +1,4 @@
-name: Signed desktop release
+name: Desktop release
 
 on:
   push:
@@ -10,6 +10,14 @@ on:
         description: Existing version tag to publish, for example v2.2.0
         required: true
         type: string
+      release_mode:
+        description: Linux-first publishes Linux artifacts only; full-signed also runs credential-dependent macOS and Windows signing.
+        required: true
+        default: linux-first
+        type: choice
+        options:
+          - linux-first
+          - full-signed
 
 permissions:
   contents: write
@@ -24,6 +32,7 @@ env:
 jobs:
   macos:
     name: macOS signed and notarized installers
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'full-signed'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,6 +66,7 @@ jobs:
 
   windows:
     name: Windows signed NSIS installers
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'full-signed'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -98,6 +108,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Verify the release tag matches the packaged version
+        run: node -e "if ('v' + require('./package.json').version !== process.env.RELEASE_TAG) throw new Error('Release tag must match package.json version');"
       - run: pnpm check
       - run: pnpm build
       - name: Package Linux installers
@@ -114,6 +126,10 @@ jobs:
   publish:
     name: Create draft GitHub release
     needs: [macos, windows, linux]
+    if: >-
+      always() && needs.linux.result == 'success' &&
+      (github.event_name == 'push' || github.event.inputs.release_mode == 'linux-first' ||
+      (needs.macos.result == 'success' && needs.windows.result == 'success'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

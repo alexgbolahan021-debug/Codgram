@@ -56,3 +56,8 @@
 - [x] Document the exact GitHub Actions secrets and release-environment prerequisites for macOS notarization and Windows code signing without storing secret values in the repository.
 - [x] Define the optional Electron safeStorage/keychain design for local provider credentials, keeping raw values outside renderer APIs, UI state, logs, and persisted settings.
 - [x] Validate the release workflow and release documentation, then synchronize the V2.2 update to the Codgram GitHub repository.
+- [x] Adapt the signed release workflow so Linux artifacts can create a draft release without macOS or Windows signing secrets.
+- [x] Document the Linux-first release procedure and preserve disabled signed-release jobs for later activation.
+- [x] Validate and synchronize the Linux-first release workflow update to GitHub.
+- [x] Add required Linux package maintainer and desktop metadata so the Linux-first DEB/RPM release targets build successfully.
+- [x] Complete Linux release-artifact validation after providing the sandbox’s missing `ar` utility required by the DEB packager.

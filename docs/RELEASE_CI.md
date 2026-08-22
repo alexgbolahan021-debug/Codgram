@@ -1,10 +1,20 @@
 # Codgram Signed Release CI
 
-Codgram’s `.github/workflows/release.yml` is deliberately **tag- or manually-triggered only**. It builds on native macOS, Windows, and Linux runners, requires macOS and Windows signing to succeed, uploads their artifacts into a draft GitHub release, and leaves promotion to a human reviewer. The workflow does not embed certificates, passwords, tokens, or provider credentials.
+Codgram’s `.github/workflows/release.yml` is deliberately **tag- or manually-triggered only**. A version-tag push runs the Linux job only, uploading AppImage, DEB, and RPM artifacts into a draft GitHub release for human review. The credential-dependent macOS and Windows jobs remain disabled until a maintainer manually dispatches the workflow in `full-signed` mode after configuring signing secrets. The workflow does not embed certificates, passwords, tokens, or provider credentials.
 
 > Create and verify a version tag that matches `package.json` before running a release. A failed signing step is the intended behavior when signing secrets are absent or invalid; Codgram must not silently publish an unsigned macOS or Windows build.[1]
 
-## Required repository secrets
+## Release modes
+
+| Trigger | Mode | Artifacts | Signing-secret requirement |
+| --- | --- | --- | --- |
+| Push matching `vX.Y.Z` tag | Linux-first | AppImage, DEB, RPM | None |
+| Manual dispatch | `linux-first` | AppImage, DEB, RPM | None |
+| Manual dispatch | `full-signed` | Linux artifacts plus macOS and Windows installers | All applicable macOS and Windows signing secrets |
+
+The tag check prevents accidentally publishing an artifact whose package version does not match its tag. Linux artifacts are not code-signed by this workflow; review the draft release before making it public.
+
+## Required repository secrets for full-signed releases
 
 Configure these under **GitHub repository Settings → Secrets and variables → Actions**. Secret values cannot be read back after saving; store the original certificate files and recovery details in the organization’s approved secure vault.[2]
 
@@ -38,17 +48,17 @@ The default workflow supports an **exportable standard OV `.pfx`** certificate. 
 
 Windows certificate and platform rules evolve. If Codgram uses a non-exportable EV certificate or a cloud-backed signing service, do **not** attempt to convert its hardware-bound private key into a GitHub secret. Use the provider’s supported HSM or cloud-signing integration instead, then revise the `windows` job and Electron Builder `win.sign` configuration as one audited change.[1] [4]
 
-## Release procedure
+## Linux-first release procedure
 
 | Step | Human action | Expected result |
 | --- | --- | --- |
 | 1 | Confirm `pnpm check`, `pnpm test`, `pnpm desktop:smoke:v21`, and a local package verification pass. | The tagged source is release-ready. |
 | 2 | Update `package.json` to the intended semantic version and commit it. | The version and future tag agree. |
-| 3 | Create and push `vX.Y.Z`, or run the workflow manually with an existing tag. | Native platform jobs create signed-ready installer artifacts. |
-| 4 | Review the draft GitHub release, artifact names, signatures, and notarization result. | A human confirms the release evidence. |
-| 5 | Publish the draft release manually. | Downloadable artifacts become public according to repository visibility. |
+| 3 | Create and push matching `vX.Y.Z`. | The Linux runner creates AppImage, DEB, and RPM artifacts in a draft release. |
+| 4 | Review the draft GitHub release and Linux artifact names. | A human confirms the draft-release evidence. |
+| 5 | Publish the draft release manually. | Linux downloads become public according to repository visibility. |
 
-The workflow intentionally creates a **draft** release. It never promotes a release automatically, and it does not configure automatic in-app updates. Electron Builder publishing is explicitly disabled in packaging commands; artifact publication happens only after all native build jobs pass.[3]
+To add macOS and Windows later, configure the secrets above and manually dispatch the same workflow with `release_mode: full-signed` against the existing tag. That run requires all three platform jobs to succeed before it updates the draft release. The workflow intentionally creates a **draft** release. It never promotes a release automatically, and it does not configure automatic in-app updates. Electron Builder publishing is explicitly disabled in packaging commands; artifact publication happens only after the selected release-mode jobs pass.[3]
 
 ## References
 
